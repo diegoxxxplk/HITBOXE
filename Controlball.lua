@@ -1,14 +1,10 @@
--- Blue Lock Rivals Hub | Interface, Hitbox e Controle de Bola
--- Feito para rodar via loadstring()
-
+-- Blue Lock Rivals - Script de Hitbox + Controle de Bola
 local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
-local humanoidRoot = character:WaitForChild("HumanoidRootPart")
+local hrp = character:WaitForChild("HumanoidRootPart")
 local PlayerGui = player:WaitForChild("PlayerGui")
 
 -- Remove UI antiga se existir
@@ -16,95 +12,103 @@ if PlayerGui:FindFirstChild("BlueLockUI") then
 	PlayerGui:FindFirstChild("BlueLockUI"):Destroy()
 end
 
--- Criar a interface
-local screenGui = Instance.new("ScreenGui")
+-- Interface
+local screenGui = Instance.new("ScreenGui", PlayerGui)
 screenGui.Name = "BlueLockUI"
 screenGui.ResetOnSpawn = false
-screenGui.Parent = PlayerGui
 
--- Botão: Ativar Hitbox
-local activateHitboxBtn = Instance.new("TextButton")
-activateHitboxBtn.Size = UDim2.new(0, 150, 0, 40)
-activateHitboxBtn.Position = UDim2.new(0.05, 0, 0.85, 0)
-activateHitboxBtn.Text = "Ativar Hitbox"
-activateHitboxBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-activateHitboxBtn.TextColor3 = Color3.new(1, 1, 1)
-activateHitboxBtn.Parent = screenGui
+-- Botão 1: Ativar/Desativar Hitbox
+local toggleHitboxBtn = Instance.new("TextButton")
+toggleHitboxBtn.Size = UDim2.new(0, 160, 0, 40)
+toggleHitboxBtn.Position = UDim2.new(0.02, 0, 0.80, 0)
+toggleHitboxBtn.Text = "Ativar Hitbox"
+toggleHitboxBtn.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
+toggleHitboxBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleHitboxBtn.Parent = screenGui
 
--- Botão: Controlar Bola
+-- Botão 2: Aumentar/Diminuir Hitbox
+local resizeBtn = Instance.new("TextButton")
+resizeBtn.Size = UDim2.new(0, 160, 0, 40)
+resizeBtn.Position = UDim2.new(0.02, 0, 0.85, 0)
+resizeBtn.Text = "Aumentar Hitbox"
+resizeBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+resizeBtn.TextColor3 = Color3.new(1, 1, 1)
+resizeBtn.Parent = screenGui
+
+-- Botão 3: Controlar Bola
 local controlBallBtn = Instance.new("TextButton")
-controlBallBtn.Size = UDim2.new(0, 150, 0, 40)
-controlBallBtn.Position = UDim2.new(0.25, 0, 0.85, 0)
+controlBallBtn.Size = UDim2.new(0, 160, 0, 40)
+controlBallBtn.Position = UDim2.new(0.02, 0, 0.90, 0)
 controlBallBtn.Text = "Controlar Bola"
-controlBallBtn.BackgroundColor3 = Color3.fromRGB(255, 85, 0)
+controlBallBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
 controlBallBtn.TextColor3 = Color3.new(1, 1, 1)
 controlBallBtn.Parent = screenGui
 
--- Hitbox personalizada
+-- HITBOX
 local hitbox = Instance.new("Part")
-hitbox.Size = Vector3.new(8, 6, 8)
-hitbox.Shape = Enum.PartType.Ball
-hitbox.Transparency = 1
-hitbox.Anchored = false
+hitbox.Size = Vector3.new(8, 5, 8)
+hitbox.Shape = Enum.PartType.Block
+hitbox.Anchored = true
 hitbox.CanCollide = false
-hitbox.BrickColor = BrickColor.new("Bright blue")
+hitbox.Transparency = 0.5
 hitbox.Material = Enum.Material.ForceField
+hitbox.Color = Color3.fromRGB(255, 255, 0)
+hitbox.Name = "HitboxArea"
+hitbox.Visible = false
 hitbox.Parent = workspace
 
-local weld = Instance.new("WeldConstraint")
-weld.Part0 = humanoidRoot
-weld.Part1 = hitbox
-weld.Parent = hitbox
-hitbox.CFrame = humanoidRoot.CFrame
-weld.Enabled = false
+local hitboxEnabled = false
+local hitboxSize = 8
+local resizeMode = "increase"
 
--- Bola
-local ball = Instance.new("Part")
-ball.Size = Vector3.new(2, 2, 2)
-ball.Shape = Enum.PartType.Ball
-ball.BrickColor = BrickColor.new("Bright red")
-ball.Material = Enum.Material.SmoothPlastic
-ball.Position = humanoidRoot.Position + Vector3.new(0, -2, 3)
-ball.Anchored = false
-ball.CanCollide = true
-ball.Name = "BlueLockBall"
-ball.Parent = workspace
+toggleHitboxBtn.MouseButton1Click:Connect(function()
+	hitboxEnabled = not hitboxEnabled
+	hitbox.Visible = hitboxEnabled
+	toggleHitboxBtn.Text = hitboxEnabled and "Desativar Hitbox" or "Ativar Hitbox"
+end)
 
-local controlActive = false
-
--- Eventos dos botões
-activateHitboxBtn.MouseButton1Click:Connect(function()
-	if weld.Enabled then
-		weld.Enabled = false
-		hitbox.Transparency = 1
-		activateHitboxBtn.Text = "Ativar Hitbox"
+resizeBtn.MouseButton1Click:Connect(function()
+	if resizeMode == "increase" then
+		hitboxSize += 2
+		resizeBtn.Text = "Diminuir Hitbox"
+		resizeMode = "decrease"
 	else
-		weld.Enabled = true
-		hitbox.Transparency = 0.5
-		activateHitboxBtn.Text = "Desativar Hitbox"
+		hitboxSize = math.max(4, hitboxSize - 2)
+		resizeBtn.Text = "Aumentar Hitbox"
+		resizeMode = "increase"
+	end
+	hitbox.Size = Vector3.new(hitboxSize, 5, hitboxSize)
+end)
+
+-- Atualizar posição da hitbox
+RunService.RenderStepped:Connect(function()
+	if hitboxEnabled and character and hrp then
+		hitbox.CFrame = hrp.CFrame
 	end
 end)
+
+-- BOLA
+local ball = nil
+
+-- Procurar bola no jogo (automaticamente)
+local function findBall()
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		if obj:IsA("Part") and obj.Name:lower():find("ball") and obj:IsDescendantOf(workspace) then
+			return obj
+		end
+	end
+	return nil
+end
 
 controlBallBtn.MouseButton1Click:Connect(function()
-	controlActive = not controlActive
-	controlBallBtn.Text = controlActive and "Soltar Bola" or "Controlar Bola"
-end)
-
--- Movimento da bola quando controlando
-RunService.RenderStepped:Connect(function()
-	if controlActive and ball and humanoidRoot then
-		local direction = humanoidRoot.CFrame.LookVector * 3
-		local targetPos = humanoidRoot.Position + direction - Vector3.new(0, 1.5, 0)
-		local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Linear)
-		local tween = TweenService:Create(ball, tweenInfo, {Position = targetPos})
+	ball = findBall()
+	if ball and (ball.Position - hrp.Position).Magnitude < 60 then
+		local goal = hrp.Position + hrp.CFrame.LookVector * 3
+		local tween = TweenService:Create(ball, TweenInfo.new(0.3), {Position = goal})
 		tween:Play()
-	end
-end)
-
--- Chutar a bola com Q
-UIS.InputBegan:Connect(function(input, gpe)
-	if gpe then return end
-	if input.KeyCode == Enum.KeyCode.Q and controlActive then
-		ball.Velocity = humanoidRoot.CFrame.LookVector * 60
+	else
+		controlBallBtn.Text = "Bola não encontrada"
+		wait(1)
+		controlBallBtn.Text = "Controlar Bola"
 	end
 end)
