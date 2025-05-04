@@ -33,16 +33,16 @@ end)
 
 -- Função auxiliar: efeito visual
 local function efeitoDash(pé)
-	local part = Instance.new("ParticleEmitter", pé)
-	part.Texture = "rbxassetid://48374994"
-	part.Size = NumberSequence.new(1)
-	part.Rate = 100
-	part.Lifetime = NumberRange.new(0.3)
-	part.Speed = NumberRange.new(4)
-	part.Color = ColorSequence.new(Color3.fromRGB(255, 255, 0))
-	game.Debris:AddItem(part, 0.4)
+    if not pé then return end -- evita erro se o "pé" for nil
+    local part = Instance.new("ParticleEmitter", pé)
+    part.Texture = "rbxassetid://48374994"
+    part.Size = NumberSequence.new(1)
+    part.Rate = 100
+    part.Lifetime = NumberRange.new(0.3)
+    part.Speed = NumberRange.new(4)
+    part.Color = ColorSequence.new(Color3.fromRGB(255, 255, 0))
+    game.Debris:AddItem(part, 0.4)
 end
-
 -- Função auxiliar: som
 local function somDash()
 	local sound = Instance.new("Sound", character)
