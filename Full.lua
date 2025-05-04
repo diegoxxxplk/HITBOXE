@@ -91,3 +91,16 @@ end
 createSkillButton(skills.SuperSpeed, "Super Velocidade", UDim2.new(0.5, -100, 0.3, 0))
 createSkillButton(skills.DoubleJump, "Salto Duplo", UDim2.new(0.5, -100, 0.5, 0))
 
+-- Criando o botão de Fechar
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 100, 0, 40)
+closeButton.Position = UDim2.new(0.5, -50, 0.7, 0)
+closeButton.Text = "Fechar"
+closeButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.Parent = ScreenGui
+
+-- Função para fechar a interface
+closeButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()  -- Remove a interface
+end)
