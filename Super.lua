@@ -1,116 +1,69 @@
--- Habilidade de Chute Super
+-- Super Chute com efeito visual (local), pronto para integrar com RemoteEvents
 local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
-local UIS = game:GetService("UserInputService")
+local char = player.Character or player.CharacterAdded:Wait()
+local humanoid = char:WaitForChild("Humanoid")
 
--- Variáveis de habilidade
-local superShotActivated = false
-local superShotCooldown = 10
-local superShotDuration = 5
+local gui = Instance.new("ScreenGui", player.PlayerGui)
+gui.Name = "SuperShotUI"
 
--- Função de ativação do chute super
-local function activateSuperShot()
-    if superShotActivated then
-        return
-    end
-    superShotActivated = true
-    print("Chute Super Ativado!")
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 250, 0, 80)
+frame.Position = UDim2.new(0.5, -125, 0.1, 0)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+frame.BorderSizePixel = 0
+frame.Name = "MainFrame"
 
-    -- Aumenta o poder do chute
-    humanoid.WalkSpeed = 100  -- Pode aumentar a velocidade do jogador ao ativar
-    -- Aqui você pode adicionar lógica para o jogador executar um chute mais forte
+local shotButton = Instance.new("TextButton", frame)
+shotButton.Size = UDim2.new(1, 0, 1, 0)
+shotButton.Text = "Ativar Super Chute"
+shotButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+shotButton.TextColor3 = Color3.new(1, 1, 1)
+shotButton.Font = Enum.Font.GothamBold
+shotButton.TextScaled = true
 
-    -- Habilidade dura 'superShotDuration' segundos
-    wait(superShotDuration)
-    
-    -- Desativa o poder após o tempo de duração
-    humanoid.WalkSpeed = 16  -- Restaura a velocidade normal
-    superShotActivated = false
+-- Função que ativa o "super chute"
+local function activateSuperChute()
+	if not char then return end
+	if not humanoid then return end
 
-    -- Reinicia o cooldown após a duração da habilidade
-    wait(superShotCooldown)
+	local leg = char:FindFirstChild("RightFoot") or char:FindFirstChild("Right Leg")
+	if not leg then return end
+
+	-- Efeito visual no pé
+	local attachment = Instance.new("Attachment", leg)
+	local trail = Instance.new("Trail", leg)
+	trail.Attachment0 = attachment
+	trail.Attachment1 = attachment
+	trail.Lifetime = 0.3
+	trail.Color = ColorSequence.new(Color3.new(0, 1, 0))
+	trail.WidthScale = NumberSequence.new(2)
+
+	-- Efeito de brilho
+	local fire = Instance.new("ParticleEmitter", leg)
+	fire.Texture = "rbxassetid://48374994"
+	fire.Color = ColorSequence.new(Color3.new(1, 1, 0), Color3.new(1, 0, 0))
+	fire.Size = NumberSequence.new(1)
+	fire.Rate = 50
+	fire.Lifetime = NumberRange.new(0.3)
+	fire.Speed = NumberRange.new(2)
+
+	-- Efeito sonoro (opcional)
+	local sound = Instance.new("Sound", leg)
+	sound.SoundId = "rbxassetid://12222225" -- Coloque um ID de som de chute ou energia
+	sound.Volume = 3
+	sound:Play()
+
+	-- Temporariamente aumenta a velocidade do personagem (efeito de força)
+	local oldSpeed = humanoid.WalkSpeed
+	humanoid.WalkSpeed = 75
+
+	wait(1.5) -- duração do super chute
+
+	humanoid.WalkSpeed = oldSpeed
+	trail:Destroy()
+	fire:Destroy()
+	sound:Destroy()
+	attachment:Destroy()
 end
 
--- Criando a Interface Gráfica
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Parent = player.PlayerGui
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 300, 0, 100)
-mainFrame.Position = UDim2.new(0.5, -150, 0.5, -50)
-mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-mainFrame.BorderSizePixel = 0
-mainFrame.Parent = ScreenGui
-
--- Função para criar o botão de ativação do chute
-local activateButton = Instance.new("TextButton")
-activateButton.Size = UDim2.new(0, 150, 0, 40)
-activateButton.Position = UDim2.new(0.5, -75, 0.2, 0)
-activateButton.Text = "Ativar Chute Super"
-activateButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-activateButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-activateButton.Parent = mainFrame
-
--- Função para ativar/desativar o chute
-activateButton.MouseButton1Click:Connect(function()
-    activateSuperShot()
-end)
-
--- Botão de Minimizar
-local minimizeButton = Instance.new("TextButton")
-minimizeButton.Size = UDim2.new(0, 50, 0, 40)
-minimizeButton.Position = UDim2.new(0.7, 0, 0, 0)
-minimizeButton.Text = "_"
-minimizeButton.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
-minimizeButton.TextColor3 = Color3.fromRGB(0, 0, 0)
-minimizeButton.Parent = mainFrame
-
--- Função de Minimizar/Restaurar a interface
-local isMinimized = false
-minimizeButton.MouseButton1Click:Connect(function()
-    if isMinimized then
-        mainFrame.Size = UDim2.new(0, 300, 0, 100)
-        minimizeButton.Text = "_"
-        isMinimized = false
-    else
-        mainFrame.Size = UDim2.new(0, 300, 0, 30)
-        minimizeButton.Text = ">"
-        isMinimized = true
-    end
-end)
-
--- Botão de Fechar
-local closeButton = Instance.new("TextButton")
-closeButton.Size = UDim2.new(0, 50, 0, 40)
-closeButton.Position = UDim2.new(0.8, 0, 0, 0)
-closeButton.Text = "X"
-closeButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.Parent = mainFrame
-
--- Função de Fechar a Interface
-closeButton.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()  -- Remove a interface
-end)
-
--- Função para exibir o cooldown de ativação
-local cooldownLabel = Instance.new("TextLabel")
-cooldownLabel.Size = UDim2.new(0, 300, 0, 30)
-cooldownLabel.Position = UDim2.new(0.5, -150, 0.8, 0)
-cooldownLabel.Text = "Cooldown: " .. superShotCooldown
-cooldownLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-cooldownLabel.BackgroundTransparency = 1
-cooldownLabel.Parent = ScreenGui
-
--- Atualiza o cooldown na tela
-while true do
-    if superShotActivated == false then
-        local cooldownTime = superShotCooldown
-        while cooldownTime > 0 do
-            cooldownLabel.Text = "Cooldown: " .. tostring(cooldownTime)
-            wait(1)
-            cooldownTime = cooldownTime - 1
-        end
-    end
-    wait(1)
-end
+shotButton.MouseButton1Click:Connect(activateSuperChute)
