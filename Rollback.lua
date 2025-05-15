@@ -1,42 +1,46 @@
--- Criar ScreenGui e colocar na PlayerGui
+local DataStoreService = game:GetService("DataStoreService")
+local RollbackStateStore = DataStoreService:GetDataStore("RollbackState")
+
 local Players = game:GetService("Players")
-local player = Players.LocalPlayer or Players.PlayerAdded:Wait()
-local playerGui = player:WaitForChild("PlayerGui")
 
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "RollbackGui"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = playerGui
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SetRollbackState = Instance.new("RemoteEvent")
+SetRollbackState.Name = "SetRollbackState"
+SetRollbackState.Parent = ReplicatedStorage
 
--- Criar botão Relogar
-local rejoinButton = Instance.new("TextButton")
-rejoinButton.Name = "RejoinButton"
-rejoinButton.Size = UDim2.new(0, 150, 0, 50)
-rejoinButton.Position = UDim2.new(0, 10, 0, 10)
-rejoinButton.Text = "Relogar"
-rejoinButton.Parent = screenGui
+-- Guardar rollback ativado para cada jogador em memória
+local rollbackStates = {}
 
--- Criar botão Rollback
-local rollbackButton = Instance.new("TextButton")
-rollbackButton.Name = "RollbackToggle"
-rollbackButton.Size = UDim2.new(0, 150, 0, 50)
-rollbackButton.Position = UDim2.new(0, 10, 0, 70)
-rollbackButton.Text = "Rollback: OFF"
-rollbackButton.Parent = screenGui
+-- Quando o jogador conecta, tenta carregar o estado salvo
+Players.PlayerAdded:Connect(function(player)
+    local success, savedState = pcall(function()
+        return RollbackStateStore:GetAsync(player.UserId)
+    end)
 
--- Estado rollback
-local rollbackEnabled = false
+    if success and savedState ~= nil then
+        rollbackStates[player.UserId] = savedState
+    else
+        rollbackStates[player.UserId] = false
+    end
 
--- Função Relogar
-local TeleportService = game:GetService("TeleportService")
-rejoinButton.MouseButton1Click:Connect(function()
-	TeleportService:Teleport(game.PlaceId, player)
+    -- Enviar estado para o cliente (se quiser)
+    SetRollbackState:FireClient(player, rollbackStates[player.UserId])
 end)
 
--- Função ativar/desativar rollback
-rollbackButton.MouseButton1Click:Connect(function()
-	rollbackEnabled = not rollbackEnabled
-	rollbackButton.Text = "Rollback: " .. (rollbackEnabled and "ON" or "OFF")
-	-- Aqui você pode disparar RemoteEvent para avisar servidor do estado
-	print("Rollback ativado:", rollbackEnabled)
+-- Quando o jogador muda o estado rollback via botão
+SetRollbackState.OnServerEvent:Connect(function(player, newState)
+    rollbackStates[player.UserId] = newState
+
+    -- Salvar no DataStore
+    local success, err = pcall(function()
+        RollbackStateStore:SetAsync(player.UserId, newState)
+    end)
+    if not success then
+        warn("Falha ao salvar rollback para "..player.Name..": "..err)
+    end
+end)
+
+-- Opcional: quando o jogador sai, limpa a memória (não obrigatório)
+Players.PlayerRemoving:Connect(function(player)
+    rollbackStates[player.UserId] = nil
 end)
