@@ -1,110 +1,31 @@
--- Hitbox Expander com Slider para Mobile + Super Chute Azul
+-- LocalScript dentro do ScreenGui
 
-local player = game.Players.LocalPlayer
-local sizeDefault = 2 -- Tamanho padrão
-local transparency = 1 -- Invisível
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Criar a interface
-local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-local frame = Instance.new("Frame", screenGui)
-frame.Position = UDim2.new(0.05, 0, 0.8, 0)
-frame.Size = UDim2.new(0.4, 0, 0.1, 0)
-frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-frame.BackgroundTransparency = 0.4
+-- Referências aos botões
+local rejoinButton = script.Parent:WaitForChild("RejoinButton")
+local rollbackButton = script.Parent:WaitForChild("RollbackToggle")
 
-local slider = Instance.new("TextButton", frame)
-slider.Size = UDim2.new(0.1, 0, 1, 0)
-slider.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-slider.Text = ""
+-- Estado do rollback (começa desligado)
+local rollbackEnabled = false
 
--- Função para atualizar o tamanho do hitbox
-local function updateSize(newSize)
-    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        local part = player.Character.HumanoidRootPart
-        part.Size = Vector3.new(newSize, newSize, newSize)
-        part.Transparency = transparency
-        part.CanCollide = false
-        part.Massless = true
-        part.Anchored = false
-    end
-end
-
-updateSize(sizeDefault)
-
--- Evento de arrastar o slider
-local dragging = false
-
-slider.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-    end
+-- Função: Reentrar no jogo
+rejoinButton.MouseButton1Click:Connect(function()
+	local player = Players.LocalPlayer
+	TeleportService:Teleport(game.PlaceId, player)
 end)
 
-slider.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
-end)
+-- Função: Ativar/desativar rollback
+rollbackButton.MouseButton1Click:Connect(function()
+	rollbackEnabled = not rollbackEnabled
 
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
-        local relativeX = (input.Position.X - frame.AbsolutePosition.X) / frame.AbsoluteSize.X
-        relativeX = math.clamp(relativeX, 0.05, 1) -- Limita o slider
-        slider.Position = UDim2.new(relativeX, 0, 0, 0)
-        local newSize = sizeDefault * (relativeX * 5) -- Multiplica o tamanho
-        updateSize(newSize)
-    end
-end)
+	-- Atualiza o texto do botão
+	rollbackButton.Text = "Rollback: " .. (rollbackEnabled and "ON" or "OFF")
 
--- SUPER CHUTE AZUL
-local UIS = game:GetService("UserInputService")
-
-local function superChute()
-    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        local root = player.Character.HumanoidRootPart
-
-        -- Efeito de impacto azul
-        local efeito = Instance.new("Part")
-        efeito.Size = Vector3.new(10,10,10)
-        efeito.Shape = Enum.PartType.Ball
-        efeito.Material = Enum.Material.Neon
-        efeito.Color = Color3.fromRGB(0, 150, 255)
-        efeito.Transparency = 0.3
-        efeito.Anchored = true
-        efeito.CanCollide = false
-        efeito.CFrame = root.CFrame
-        efeito.Parent = workspace
-
-        -- Efeito explodindo
-        local tweenService = game:GetService("TweenService")
-        local info = TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
-        local goal = {Size = Vector3.new(50,50,50), Transparency = 1}
-        local tween = tweenService:Create(efeito, info, goal)
-        tween:Play()
-
-        -- Destruir depois
-        tween.Completed:Connect(function()
-            efeito:Destroy()
-        end)
-
-        -- Impulso no player (chute super forte)
-        local bodyVelocity = Instance.new("BodyVelocity")
-        bodyVelocity.Velocity = root.CFrame.LookVector * 200 -- Velocidade do chute
-        bodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-        bodyVelocity.Parent = root
-
-        game.Debris:AddItem(bodyVelocity, 0.2) -- Remove o impulso depois de 0.2 segundos
-    end
-end
-
--- Ativar super chute quando clicar na tela com 2 dedos (ou mouse direito)
-UIS.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        if input.Position.Y > workspace.CurrentCamera.ViewportSize.Y * 0.5 then
-            -- Se tocar na parte inferior da tela
-            superChute()
-        end
-    elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
-        superChute()
-    end
+	-- Envia comando ao servidor
+	if ReplicatedStorage:FindFirstChild("SetRollbackState") then
+		ReplicatedStorage.SetRollbackState:FireServer(rollbackEnabled)
+	end
 end)
