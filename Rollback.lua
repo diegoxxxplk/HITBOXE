@@ -1,50 +1,85 @@
--- LocalScript: RollbackClient.lua (coloque em StarterPlayerScripts ou carregue via loadstring)
+local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TeleportService = game:GetService("TeleportService")
 
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-local SetRollbackState = ReplicatedStorage:WaitForChild("SetRollbackState")
+-- RemoteEvent para comunicação
+local RollbackEvent = Instance.new("RemoteEvent")
+RollbackEvent.Name = "RollbackEvent"
+RollbackEvent.Parent = ReplicatedStorage
 
--- Criar GUI
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "RollbackGui"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = playerGui
+-- DataStores para dados normais e rollback
+local PlayerDataStore = DataStoreService:GetDataStore("BlueLockPlayerData")
+local RollbackDataStore = DataStoreService:GetDataStore("BlueLockRollbackData")
+local RollbackStateStore = DataStoreService:GetDataStore("RollbackState")
 
--- Botão Relogar
-local rejoinButton = Instance.new("TextButton")
-rejoinButton.Name = "RejoinButton"
-rejoinButton.Size = UDim2.new(0, 150, 0, 50)
-rejoinButton.Position = UDim2.new(0, 10, 0, 10)
-rejoinButton.Text = "Relogar"
-rejoinButton.Parent = screenGui
+local rollbackStates = {}
 
--- Botão Rollback
-local rollbackButton = Instance.new("TextButton")
-rollbackButton.Name = "RollbackToggle"
-rollbackButton.Size = UDim2.new(0, 150, 0, 50)
-rollbackButton.Position = UDim2.new(0, 10, 0, 70)
-rollbackButton.Text = "Rollback: OFF"
-rollbackButton.Parent = screenGui
+-- Função para carregar dados do jogador
+local function LoadPlayerData(player)
+    local success, data = pcall(function()
+        return PlayerDataStore:GetAsync(player.UserId)
+    end)
+    if success and data then
+        return data
+    else
+        return {}
+    end
+end
 
-local rollbackEnabled = false
+-- Função para salvar dados do jogador
+local function SavePlayerData(player, data)
+    pcall(function()
+        PlayerDataStore:SetAsync(player.UserId, data)
+    end)
+end
 
--- Atualiza o botão de rollback ao receber estado do servidor
-SetRollbackState.OnClientEvent:Connect(function(state)
-    rollbackEnabled = state
-    rollbackButton.Text = "Rollback: " .. (rollbackEnabled and "ON" or "OFF")
+-- Função para salvar backup rollback
+local function SaveRollbackData(player, data)
+    pcall(function()
+        RollbackDataStore:SetAsync(player.UserId, data)
+    end)
+end
+
+Players.PlayerAdded:Connect(function(player)
+    -- Carregar rollback ligado ou não
+    local success, rollbackState = pcall(function()
+        return RollbackStateStore:GetAsync(player.UserId)
+    end)
+    rollbackStates[player.UserId] = (success and rollbackState == true)
+
+    -- Enviar estado para cliente
+    RollbackEvent:FireClient(player, "UpdateState", rollbackStates[player.UserId])
+
+    -- Aqui você pode carregar os dados do jogador normalmente (de PlayerDataStore)
+    -- e aplicar no personagem, stats etc (depende do jogo)
 end)
 
--- Botão relogar teleporta o jogador para o jogo atual
-rejoinButton.MouseButton1Click:Connect(function()
-    TeleportService:Teleport(game.PlaceId, player)
-end)
-
--- Botão rollback alterna estado e avisa servidor
-rollbackButton.MouseButton1Click:Connect(function()
-    rollbackEnabled = not rollbackEnabled
-    rollbackButton.Text = "Rollback: " .. (rollbackEnabled and "ON" or "OFF")
-    SetRollbackState:FireServer(rollbackEnabled)
+-- Evento para trocar estado rollback pelo cliente
+RollbackEvent.OnServerEvent:Connect(function(player, action, value)
+    if action == "ToggleRollback" and type(value) == "boolean" then
+        rollbackStates[player.UserId] = value
+        RollbackStateStore:SetAsync(player.UserId, value)
+        RollbackEvent:FireClient(player, "UpdateState", value)
+    elseif action == "RequestSave" then
+        if rollbackStates[player.UserId] then
+            -- Pega os dados atuais do jogador (você deve adaptar isso para seu jogo)
+            local currentData = LoadPlayerData(player) -- Ou você pega dados da memória
+            SaveRollbackData(player, currentData)
+            RollbackEvent:FireClient(player, "Notify", "Rollback salvo com sucesso!")
+        else
+            RollbackEvent:FireClient(player, "Notify", "Rollback não está ativado.")
+        end
+    elseif action == "RequestRestore" then
+        local success, rollbackData = pcall(function()
+            return RollbackDataStore:GetAsync(player.UserId)
+        end)
+        if success and rollbackData then
+            -- Aqui você deve aplicar rollbackData no jogador (adaptar pro seu jogo)
+            -- Exemplo genérico: salvar dados normais do jogador para rollbackData
+            SavePlayerData(player, rollbackData)
+            RollbackEvent:FireClient(player, "Notify", "Rollback restaurado! Por favor, relogue.")
+        else
+            RollbackEvent:FireClient(player, "Notify", "Nenhum rollback disponível.")
+        end
+    end
 end)
