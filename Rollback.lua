@@ -1,48 +1,42 @@
--- ServerScript: RollbackServer.lua (coloque no ServerScriptService)
-local DataStoreService = game:GetService("DataStoreService")
+-- Criar ScreenGui e colocar na PlayerGui
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer or Players.PlayerAdded:Wait()
+local playerGui = player:WaitForChild("PlayerGui")
 
--- Cria RemoteEvent para comunicação
-local SetRollbackState = Instance.new("RemoteEvent")
-SetRollbackState.Name = "SetRollbackState"
-SetRollbackState.Parent = ReplicatedStorage
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "RollbackGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
 
-local RollbackStateStore = DataStoreService:GetDataStore("RollbackState")
+-- Criar botão Relogar
+local rejoinButton = Instance.new("TextButton")
+rejoinButton.Name = "RejoinButton"
+rejoinButton.Size = UDim2.new(0, 150, 0, 50)
+rejoinButton.Position = UDim2.new(0, 10, 0, 10)
+rejoinButton.Text = "Relogar"
+rejoinButton.Parent = screenGui
 
-local rollbackStates = {}
+-- Criar botão Rollback
+local rollbackButton = Instance.new("TextButton")
+rollbackButton.Name = "RollbackToggle"
+rollbackButton.Size = UDim2.new(0, 150, 0, 50)
+rollbackButton.Position = UDim2.new(0, 10, 0, 70)
+rollbackButton.Text = "Rollback: OFF"
+rollbackButton.Parent = screenGui
 
--- Carrega estado rollback do DataStore ao entrar
-Players.PlayerAdded:Connect(function(player)
-    local success, savedState = pcall(function()
-        return RollbackStateStore:GetAsync(player.UserId)
-    end)
+-- Estado rollback
+local rollbackEnabled = false
 
-    if success and type(savedState) == "boolean" then
-        rollbackStates[player.UserId] = savedState
-    else
-        rollbackStates[player.UserId] = false
-    end
-
-    -- Envia estado para o cliente atualizar UI
-    SetRollbackState:FireClient(player, rollbackStates[player.UserId])
+-- Função Relogar
+local TeleportService = game:GetService("TeleportService")
+rejoinButton.MouseButton1Click:Connect(function()
+	TeleportService:Teleport(game.PlaceId, player)
 end)
 
--- Recebe pedido do cliente para mudar estado rollback
-SetRollbackState.OnServerEvent:Connect(function(player, newState)
-    if type(newState) == "boolean" then
-        rollbackStates[player.UserId] = newState
-
-        -- Salva no DataStore
-        local success, err = pcall(function()
-            RollbackStateStore:SetAsync(player.UserId, newState)
-        end)
-        if not success then
-            warn("Erro ao salvar rollback para "..player.Name..": "..err)
-        end
-    end
-end)
-
-Players.PlayerRemoving:Connect(function(player)
-    rollbackStates[player.UserId] = nil
+-- Função ativar/desativar rollback
+rollbackButton.MouseButton1Click:Connect(function()
+	rollbackEnabled = not rollbackEnabled
+	rollbackButton.Text = "Rollback: " .. (rollbackEnabled and "ON" or "OFF")
+	-- Aqui você pode disparar RemoteEvent para avisar servidor do estado
+	print("Rollback ativado:", rollbackEnabled)
 end)
