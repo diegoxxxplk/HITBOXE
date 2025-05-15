@@ -1,14 +1,19 @@
--- Criar ScreenGui e colocar na PlayerGui
+-- LocalScript: RollbackClient.lua (coloque em StarterPlayerScripts ou carregue via loadstring)
 local Players = game:GetService("Players")
-local player = Players.LocalPlayer or Players.PlayerAdded:Wait()
-local playerGui = player:WaitForChild("PlayerGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TeleportService = game:GetService("TeleportService")
 
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local SetRollbackState = ReplicatedStorage:WaitForChild("SetRollbackState")
+
+-- Criar GUI
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "RollbackGui"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
--- Criar botão Relogar
+-- Botão Relogar
 local rejoinButton = Instance.new("TextButton")
 rejoinButton.Name = "RejoinButton"
 rejoinButton.Size = UDim2.new(0, 150, 0, 50)
@@ -16,7 +21,7 @@ rejoinButton.Position = UDim2.new(0, 10, 0, 10)
 rejoinButton.Text = "Relogar"
 rejoinButton.Parent = screenGui
 
--- Criar botão Rollback
+-- Botão Rollback
 local rollbackButton = Instance.new("TextButton")
 rollbackButton.Name = "RollbackToggle"
 rollbackButton.Size = UDim2.new(0, 150, 0, 50)
@@ -24,19 +29,22 @@ rollbackButton.Position = UDim2.new(0, 10, 0, 70)
 rollbackButton.Text = "Rollback: OFF"
 rollbackButton.Parent = screenGui
 
--- Estado rollback
 local rollbackEnabled = false
 
--- Função Relogar
-local TeleportService = game:GetService("TeleportService")
-rejoinButton.MouseButton1Click:Connect(function()
-	TeleportService:Teleport(game.PlaceId, player)
+-- Atualiza o botão de rollback ao receber estado do servidor
+SetRollbackState.OnClientEvent:Connect(function(state)
+    rollbackEnabled = state
+    rollbackButton.Text = "Rollback: " .. (rollbackEnabled and "ON" or "OFF")
 end)
 
--- Função ativar/desativar rollback
+-- Botão relogar teleporta o jogador para o jogo atual
+rejoinButton.MouseButton1Click:Connect(function()
+    TeleportService:Teleport(game.PlaceId, player)
+end)
+
+-- Botão rollback alterna estado e avisa servidor
 rollbackButton.MouseButton1Click:Connect(function()
-	rollbackEnabled = not rollbackEnabled
-	rollbackButton.Text = "Rollback: " .. (rollbackEnabled and "ON" or "OFF")
-	-- Aqui você pode disparar RemoteEvent para avisar servidor do estado
-	print("Rollback ativado:", rollbackEnabled)
+    rollbackEnabled = not rollbackEnabled
+    rollbackButton.Text = "Rollback: " .. (rollbackEnabled and "ON" or "OFF")
+    SetRollbackState:FireServer(rollbackEnabled)
 end)
