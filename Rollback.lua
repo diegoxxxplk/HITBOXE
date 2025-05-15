@@ -1,31 +1,42 @@
--- LocalScript dentro do ScreenGui
-
-local TeleportService = game:GetService("TeleportService")
+-- Criar ScreenGui e colocar na PlayerGui
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer or Players.PlayerAdded:Wait()
+local playerGui = player:WaitForChild("PlayerGui")
 
--- Referências aos botões
-local rejoinButton = script.Parent:WaitForChild("RejoinButton")
-local rollbackButton = script.Parent:WaitForChild("RollbackToggle")
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "RollbackGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
 
--- Estado do rollback (começa desligado)
+-- Criar botão Relogar
+local rejoinButton = Instance.new("TextButton")
+rejoinButton.Name = "RejoinButton"
+rejoinButton.Size = UDim2.new(0, 150, 0, 50)
+rejoinButton.Position = UDim2.new(0, 10, 0, 10)
+rejoinButton.Text = "Relogar"
+rejoinButton.Parent = screenGui
+
+-- Criar botão Rollback
+local rollbackButton = Instance.new("TextButton")
+rollbackButton.Name = "RollbackToggle"
+rollbackButton.Size = UDim2.new(0, 150, 0, 50)
+rollbackButton.Position = UDim2.new(0, 10, 0, 70)
+rollbackButton.Text = "Rollback: OFF"
+rollbackButton.Parent = screenGui
+
+-- Estado rollback
 local rollbackEnabled = false
 
--- Função: Reentrar no jogo
+-- Função Relogar
+local TeleportService = game:GetService("TeleportService")
 rejoinButton.MouseButton1Click:Connect(function()
-	local player = Players.LocalPlayer
 	TeleportService:Teleport(game.PlaceId, player)
 end)
 
--- Função: Ativar/desativar rollback
+-- Função ativar/desativar rollback
 rollbackButton.MouseButton1Click:Connect(function()
 	rollbackEnabled = not rollbackEnabled
-
-	-- Atualiza o texto do botão
 	rollbackButton.Text = "Rollback: " .. (rollbackEnabled and "ON" or "OFF")
-
-	-- Envia comando ao servidor
-	if ReplicatedStorage:FindFirstChild("SetRollbackState") then
-		ReplicatedStorage.SetRollbackState:FireServer(rollbackEnabled)
-	end
+	-- Aqui você pode disparar RemoteEvent para avisar servidor do estado
+	print("Rollback ativado:", rollbackEnabled)
 end)
