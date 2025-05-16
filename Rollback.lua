@@ -1,16 +1,16 @@
--- Rollback GUI Script para Roblox
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local player = Players.LocalPlayer
+local CoreGui = game:GetService("CoreGui")
 
--- Criar GUI
+-- Criar GUI dentro do CoreGui
 local gui = Instance.new("ScreenGui")
 gui.Name = "RollbackGUI"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
-gui.Parent = player:WaitForChild("PlayerGui")
+gui.Parent = CoreGui
 
--- Estado salvo do jogador
+-- Estado salvo
 local savedState = nil
 
 -- Criar botão
@@ -54,7 +54,7 @@ local function ativarRollback()
     end
 end
 
--- Desativar rollback (salva novo estado)
+-- Desativar rollback
 local function desativarRollback()
     salvarEstado()
     print("[✔] Novo estado salvo.")
@@ -70,7 +70,7 @@ criarBotao("Ativar Rollback", 100, ativarRollback)
 criarBotao("Desativar Rollback", 150, desativarRollback)
 criarBotao("Relogar", 200, relogar)
 
--- Quando o personagem reaparecer, salvar estado
+-- Salvar estado inicial
 player.CharacterAdded:Connect(function()
     wait(1)
     salvarEstado()
