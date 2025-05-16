@@ -1,37 +1,77 @@
--- GUI com rollback e relogar
+-- Rollback GUI Script para Roblox
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
 
 -- Criar GUI
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "RollbackGUI"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = playerGui
+local gui = Instance.new("ScreenGui")
+gui.Name = "RollbackGUI"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.Parent = player:WaitForChild("PlayerGui")
 
--- Dados salvos do jogador
+-- Estado salvo do jogador
 local savedState = nil
 
--- Função utilitária para criar botões
-local function createButton(name, position, callback)
-    local button = Instance.new("TextButton")
-    button.Name = name
-    button.Size = UDim2.new(0, 200, 0, 40)
-    button.Position = position
-    button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.Font = Enum.Font.SourceSansBold
-    button.TextSize = 18
-    button.Text = name
-    button.Parent = screenGui
-    button.MouseButton1Click:Connect(callback)
+-- Criar botão
+local function criarBotao(nome, posY, callback)
+    local botao = Instance.new("TextButton")
+    botao.Size = UDim2.new(0, 200, 0, 40)
+    botao.Position = UDim2.new(0, 20, 0, posY)
+    botao.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    botao.TextColor3 = Color3.fromRGB(255, 255, 255)
+    botao.Font = Enum.Font.GothamBold
+    botao.TextSize = 16
+    botao.Text = nome
+    botao.Parent = gui
+    botao.MouseButton1Click:Connect(callback)
 end
 
 -- Salvar estado atual
-local function saveState()
+local function salvarEstado()
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") then
         savedState = {
-            position = char.HumanoidRootPart.Position,
-            health = char.Humanoid.Health
+            pos = char.HumanoidRootPart.Position,
+            vida = char.Humanoid.Health
+        }
+        print("[✔] Estado salvo.")
+    end
+end
+
+-- Ativar rollback
+local function ativarRollback()
+    if not savedState then
+        warn("[✖] Nenhum estado salvo.")
+        return
+    end
+
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") then
+        char.HumanoidRootPart.CFrame = CFrame.new(savedState.pos)
+        char.Humanoid.Health = savedState.vida
+        print("[✔] Rollback ativado.")
+    end
+end
+
+-- Desativar rollback (salva novo estado)
+local function desativarRollback()
+    salvarEstado()
+    print("[✔] Novo estado salvo.")
+end
+
+-- Relogar
+local function relogar()
+    TeleportService:Teleport(game.PlaceId, player)
+end
+
+-- Criar botões
+criarBotao("Ativar Rollback", 100, ativarRollback)
+criarBotao("Desativar Rollback", 150, desativarRollback)
+criarBotao("Relogar", 200, relogar)
+
+-- Quando o personagem reaparecer, salvar estado
+player.CharacterAdded:Connect(function()
+    wait(1)
+    salvarEstado()
+end)
