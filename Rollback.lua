@@ -3,7 +3,7 @@ local TeleportService = game:GetService("TeleportService")
 local player = Players.LocalPlayer
 local CoreGui = game:GetService("CoreGui")
 
--- Criar GUI dentro do CoreGui
+-- Criar GUI no CoreGui
 local gui = Instance.new("ScreenGui")
 gui.Name = "RollbackGUI"
 gui.ResetOnSpawn = false
@@ -29,13 +29,19 @@ end
 
 -- Salvar estado atual
 local function salvarEstado()
-    local char = player.Character
-    if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") then
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart", 5)
+    local hum = char:WaitForChild("Humanoid", 5)
+
+    if hrp and hum then
         savedState = {
-            pos = char.HumanoidRootPart.Position,
-            vida = char.Humanoid.Health
+            pos = hrp.Position,
+            vida = hum.Health
         }
         print("[✔] Estado salvo.")
+        print(savedState) -- debug
+    else
+        warn("[✖] Não foi possível salvar o estado.")
     end
 end
 
@@ -46,15 +52,20 @@ local function ativarRollback()
         return
     end
 
-    local char = player.Character
-    if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") then
-        char.HumanoidRootPart.CFrame = CFrame.new(savedState.pos)
-        char.Humanoid.Health = savedState.vida
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChild("Humanoid")
+
+    if hrp and hum then
+        hrp.CFrame = CFrame.new(savedState.pos)
+        hum.Health = savedState.vida
         print("[✔] Rollback ativado.")
+    else
+        warn("[✖] Não foi possível aplicar o rollback.")
     end
 end
 
--- Desativar rollback
+-- Desativar rollback (salva novo estado)
 local function desativarRollback()
     salvarEstado()
     print("[✔] Novo estado salvo.")
@@ -70,7 +81,7 @@ criarBotao("Ativar Rollback", 100, ativarRollback)
 criarBotao("Desativar Rollback", 150, desativarRollback)
 criarBotao("Relogar", 200, relogar)
 
--- Salvar estado inicial
+-- Salvar estado quando o personagem carregar
 player.CharacterAdded:Connect(function()
     wait(1)
     salvarEstado()
