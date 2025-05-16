@@ -1,16 +1,16 @@
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
+local RunService = game:GetService("RunService")
+
 local player = Players.LocalPlayer
 local CoreGui = game:GetService("CoreGui")
 
--- Criar GUI no CoreGui
 local gui = Instance.new("ScreenGui")
 gui.Name = "RollbackGUI"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = CoreGui
 
--- Estado salvo
 local savedState = nil
 
 -- Criar botão
@@ -27,11 +27,31 @@ local function criarBotao(nome, posY, callback)
     botao.MouseButton1Click:Connect(callback)
 end
 
+-- Esperar personagem real
+local function esperarPersonagemReal()
+    local tentativas = 0
+    repeat
+        local char = player.Character or player.CharacterAdded:Wait()
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local hum = char:FindFirstChild("Humanoid")
+        local isReal = hrp and hum and hum.Health > 0
+        if isReal then return char end
+        tentativas += 1
+        wait(1)
+    until tentativas >= 10
+    return nil
+end
+
 -- Salvar estado atual
 local function salvarEstado()
-    local char = player.Character or player.CharacterAdded:Wait()
-    local hrp = char:WaitForChild("HumanoidRootPart", 5)
-    local hum = char:WaitForChild("Humanoid", 5)
+    local char = esperarPersonagemReal()
+    if not char then
+        warn("[✖] Não foi possível detectar o personagem real.")
+        return
+    end
+
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChild("Humanoid")
 
     if hrp and hum then
         savedState = {
@@ -39,29 +59,31 @@ local function salvarEstado()
             vida = hum.Health
         }
         print("[✔] Estado salvo.")
-        print(savedState) -- debug
     else
-        warn("[✖] Não foi possível salvar o estado.")
+        warn("[✖] Partes do personagem não encontradas.")
     end
 end
 
 -- Ativar rollback
 local function ativarRollback()
     if not savedState then
-        warn("[✖] Nenhum estado salvo.")
+        warn("[✖] Nenhum estado salvo ainda.")
         return
     end
 
-    local char = player.Character or player.CharacterAdded:Wait()
+    local char = esperarPersonagemReal()
+    if not char then
+        warn("[✖] Personagem inválido para rollback.")
+        return
+    end
+
     local hrp = char:FindFirstChild("HumanoidRootPart")
     local hum = char:FindFirstChild("Humanoid")
 
     if hrp and hum then
         hrp.CFrame = CFrame.new(savedState.pos)
         hum.Health = savedState.vida
-        print("[✔] Rollback ativado.")
-    else
-        warn("[✖] Não foi possível aplicar o rollback.")
+        print("[✔] Rollback aplicado.")
     end
 end
 
@@ -81,7 +103,7 @@ criarBotao("Ativar Rollback", 100, ativarRollback)
 criarBotao("Desativar Rollback", 150, desativarRollback)
 criarBotao("Relogar", 200, relogar)
 
--- Salvar estado quando o personagem carregar
+-- Salvar quando personagem real carregar
 player.CharacterAdded:Connect(function()
     wait(1)
     salvarEstado()
