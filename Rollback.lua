@@ -5,6 +5,11 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local CoreGui = game:GetService("CoreGui")
 
+-- Remover GUI anterior, se existir
+if CoreGui:FindFirstChild("RollbackGUI") then
+    CoreGui.RollbackGUI:Destroy()
+end
+
 local gui = Instance.new("ScreenGui")
 gui.Name = "RollbackGUI"
 gui.ResetOnSpawn = false
@@ -12,22 +17,9 @@ gui.IgnoreGuiInset = true
 gui.Parent = CoreGui
 
 local savedState = nil
+local rollbackAtivo = false
 
--- Criar botão
-local function criarBotao(nome, posY, callback)
-    local botao = Instance.new("TextButton")
-    botao.Size = UDim2.new(0, 200, 0, 40)
-    botao.Position = UDim2.new(0, 20, 0, posY)
-    botao.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    botao.TextColor3 = Color3.fromRGB(255, 255, 255)
-    botao.Font = Enum.Font.GothamBold
-    botao.TextSize = 16
-    botao.Text = nome
-    botao.Parent = gui
-    botao.MouseButton1Click:Connect(callback)
-end
-
--- Esperar personagem real
+-- Função para aguardar personagem real
 local function esperarPersonagemReal()
     local tentativas = 0
     repeat
@@ -46,7 +38,7 @@ end
 local function salvarEstado()
     local char = esperarPersonagemReal()
     if not char then
-        warn("[✖] Não foi possível detectar o personagem real.")
+        warn("[✖] Personagem inválido.")
         return
     end
 
@@ -59,21 +51,19 @@ local function salvarEstado()
             vida = hum.Health
         }
         print("[✔] Estado salvo.")
-    else
-        warn("[✖] Partes do personagem não encontradas.")
     end
 end
 
--- Ativar rollback
-local function ativarRollback()
+-- Aplicar rollback
+local function aplicarRollback()
     if not savedState then
-        warn("[✖] Nenhum estado salvo ainda.")
+        warn("[✖] Nenhum estado salvo.")
         return
     end
 
     local char = esperarPersonagemReal()
     if not char then
-        warn("[✖] Personagem inválido para rollback.")
+        warn("[✖] Personagem inválido.")
         return
     end
 
@@ -87,24 +77,56 @@ local function ativarRollback()
     end
 end
 
--- Desativar rollback (salva novo estado)
-local function desativarRollback()
-    salvarEstado()
-    print("[✔] Novo estado salvo.")
+-- Criar botão genérico
+local function criarBotao(nome, posY)
+    local botao = Instance.new("TextButton")
+    botao.Size = UDim2.new(0, 200, 0, 40)
+    botao.Position = UDim2.new(0, 20, 0, posY)
+    botao.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    botao.TextColor3 = Color3.fromRGB(255, 255, 255)
+    botao.Font = Enum.Font.GothamBold
+    botao.TextSize = 16
+    botao.Text = nome
+    botao.Parent = gui
+    return botao
 end
 
--- Relogar
-local function relogar()
+-- Botão rollback toggle
+local rollbackBotao = criarBotao("Rollback: DESLIGADO", 100)
+rollbackBotao.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+
+rollbackBotao.MouseButton1Click:Connect(function()
+    rollbackAtivo = not rollbackAtivo
+    if rollbackAtivo then
+        salvarEstado()
+        rollbackBotao.Text = "Rollback: ATIVADO"
+        rollbackBotao.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+    else
+        rollbackBotao.Text = "Rollback: DESLIGADO"
+        rollbackBotao.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    end
+end)
+
+-- Botão aplicar rollback (só funciona se tiver ativado)
+local aplicarBotao = criarBotao("Ativar Rollback", 150)
+aplicarBotao.MouseButton1Click:Connect(function()
+    if rollbackAtivo then
+        aplicarRollback()
+    else
+        warn("Rollback está desligado.")
+    end
+end)
+
+-- Botão de relogar
+local relogarBotao = criarBotao("Relogar", 200)
+relogarBotao.MouseButton1Click:Connect(function()
     TeleportService:Teleport(game.PlaceId, player)
-end
+end)
 
--- Criar botões
-criarBotao("Ativar Rollback", 100, ativarRollback)
-criarBotao("Desativar Rollback", 150, desativarRollback)
-criarBotao("Relogar", 200, relogar)
-
--- Salvar quando personagem real carregar
+-- Salvamento automático quando personagem real entrar
 player.CharacterAdded:Connect(function()
-    wait(1)
-    salvarEstado()
+    wait(2)
+    if rollbackAtivo then
+        salvarEstado()
+    end
 end)
