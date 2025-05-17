@@ -21,8 +21,21 @@ MainTab:AddToggle({
     Callback = function(valor)
         rollbackAtivo = valor
         if rollbackAtivo then
-            local estilo = game.Players.LocalPlayer:WaitForChild("Estilo").Value
-            estiloSalvo = estilo
+            local estilo = game.Players.LocalPlayer:FindFirstChild("Estilo")
+if estilo then
+    estiloSalvo = estilo.Value
+    OrionLib:MakeNotification({
+        Name = "Estilo Salvo",
+        Content = "Estilo salvo: " .. estiloSalvo,
+        Time = 3
+    })
+else
+    OrionLib:MakeNotification({
+        Name = "Erro",
+        Content = "Não foi possível encontrar o estilo!",
+        Time = 3
+    })
+end
             OrionLib:MakeNotification({
                 Name = "Rollback Ativado",
                 Content = "Estilo salvo: " .. estilo,
