@@ -1,31 +1,70 @@
-local gui = Instance.new("ScreenGui")
-gui.Name = "RollbackGui"
-gui.ResetOnSpawn = false
-gui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+-- UI Library (pode usar qualquer uma que preferir, como Rayfield, Kavo, etc.)
+local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Orion/main/source"))()
 
--- Botão de rollback ON/OFF
-local rollbackButton = Instance.new("TextButton")
-rollbackButton.Size = UDim2.new(0, 200, 0, 50)
-rollbackButton.Position = UDim2.new(0.5, -100, 0.5, -25)
-rollbackButton.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
-rollbackButton.Text = "Rollback: OFF"
-rollbackButton.TextColor3 = Color3.new(1, 1, 1)
-rollbackButton.Font = Enum.Font.SourceSansBold
-rollbackButton.TextSize = 20
-rollbackButton.Parent = gui
+local Window = OrionLib:MakeWindow({Name = "Sterling Hub - Blue Lock", HidePremium = false, SaveConfig = false, IntroEnabled = false})
 
--- Variável de estado
+-- Variável de estado do rollback
 local rollbackAtivo = false
+local estiloSalvo = nil
 
--- Função de clique
-rollbackButton.MouseButton1Click:Connect(function()
-	rollbackAtivo = not rollbackAtivo
+-- Aba principal
+local MainTab = Window:MakeTab({
+    Name = "Rollback de Estilo",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
 
-	if rollbackAtivo then
-		rollbackButton.Text = "Rollback: ON"
-		rollbackButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
-	else
-		rollbackButton.Text = "Rollback: OFF"
-		rollbackButton.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
-	end
-end)
+-- Alavanca de ativar/desativar rollback
+MainTab:AddToggle({
+    Name = "Rollback",
+    Default = false,
+    Callback = function(valor)
+        rollbackAtivo = valor
+        if rollbackAtivo then
+            local estilo = game.Players.LocalPlayer:WaitForChild("Estilo").Value
+            estiloSalvo = estilo
+            OrionLib:MakeNotification({
+                Name = "Rollback Ativado",
+                Content = "Estilo salvo: " .. estilo,
+                Time = 3
+            })
+        else
+            estiloSalvo = nil
+            OrionLib:MakeNotification({
+                Name = "Rollback Desativado",
+                Content = "Rollback foi desligado",
+                Time = 3
+            })
+        end
+    end
+})
+
+-- Botão de aplicar rollback
+MainTab:AddButton({
+    Name = "Aplicar Rollback",
+    Callback = function()
+        if rollbackAtivo and estiloSalvo then
+            local estiloValue = game.Players.LocalPlayer:WaitForChild("Estilo")
+            estiloValue.Value = estiloSalvo
+            OrionLib:MakeNotification({
+                Name = "Rollback Aplicado",
+                Content = "Seu estilo foi revertido para: " .. estiloSalvo,
+                Time = 3
+            })
+        else
+            OrionLib:MakeNotification({
+                Name = "Erro",
+                Content = "Rollback está desligado ou nenhum estilo salvo!",
+                Time = 3
+            })
+        end
+    end
+})
+
+-- Rejoin automático (opcional)
+MainTab:AddButton({
+    Name = "Reentrar na Partida",
+    Callback = function()
+        game:GetService("TeleportService"):Teleport(game.PlaceId, game.Players.LocalPlayer)
+    end
+})
