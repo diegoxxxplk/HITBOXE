@@ -13,7 +13,6 @@ local MainTab = Window:MakeTab({
     Icon = "rbxassetid://4483345998",
     PremiumOnly = false
 })
-
 -- Alavanca de ativar/desativar rollback
 MainTab:AddToggle({
     Name = "Rollback",
@@ -36,10 +35,10 @@ else
         Time = 3
     })
 end
-            OrionLib:MakeNotification({
-                Name = "Rollback Ativado",
-                Content = "Estilo salvo: " .. estilo,
-                Time = 3
+                    OrionLib:MakeNotification({
+   Name = "Rollback Ativado",
+Content = "Estilo salvo: " .. estilo,
+Time = 3
             })
         else
             estiloSalvo = nil
